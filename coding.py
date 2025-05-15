@@ -143,7 +143,6 @@ def load_users_from_db():
     conn.close()
     return [{"id": u[0], "username": u[1], "role": u[4], "_password_hash": u[2], "_salt": u[3]} for u in users_raw]
 
-
 def load_presets_from_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -325,7 +324,6 @@ try:
     delay_between_attempts = 0.1
     delay_between_relays = 0.05
 
-    print("Memulai proses mematikan relay awal...")
     for i in range(NUM_TVS):
         relay_successfully_turned_off = False
         for attempt in range(num_off_attempts):
@@ -336,20 +334,17 @@ try:
                 relay_successfully_turned_off = True
                 break
             except serial.SerialException as write_e:
-                print(f"    Attempt {attempt + 1} GAGAL (SerialException) kirim OFF ke relay {i}: {write_e}")
                 ser.close()
                 time.sleep(0.5)
                 ser.open()
                 time.sleep(0.5)
             except Exception as write_e_other:
-                print(f"    Attempt {attempt + 1} GAGAL (Exception) kirim OFF ke relay {i}: {write_e_other}")
                 time.sleep(0.5)
             
             if attempt == num_off_attempts - 1 and not relay_successfully_turned_off:
                  print(f"    PERINGATAN: Gagal mengirim perintah OFF ke relay {i} setelah {num_off_attempts} percobaan.")
 
         time.sleep(delay_between_relays)
-    print("Selesai proses mematikan relay awal.")
 
 except serial.SerialException as open_e:
     messagebox.showerror("Error Serial", f"Gagal membuka port serial {port}: {open_e}\nAplikasi akan keluar.")
@@ -450,7 +445,7 @@ def countdown_and_turn_off(relay, total_delay_seconds, label_widget, choice_name
                     if 0 <= relay < len(all_relay_frames):
                         current_tv_frame = all_relay_frames[relay]
                         if hasattr(current_tv_frame, 'cafe_orders'):
-                            cafe_orders_to_log_final = list(current_tv_frame.cafe_orders) # Salin list
+                            cafe_orders_to_log_final = list(current_tv_frame.cafe_orders)
 
                     log_session_to_report(tv_index=relay, start_time=start_time, end_time=end_time, 
                                           logged_duration_seconds=base_duration_seconds, 
@@ -467,7 +462,7 @@ def countdown_and_turn_off(relay, total_delay_seconds, label_widget, choice_name
         finally:
             if not stop_flags[relay].is_set() or remaining <= 0 :
                 safe_update_label(label_widget, "00:00:00")
-                active_session_data[relay] = None 
+                active_session_data[relay] = None
                 save_active_sessions()
                 if current_tv_frame: current_tv_frame.clear_session_color()
                 if 0 <= relay < len(relay_vars) and root and relay_vars[relay].get() != "Pilih Waktu":
@@ -1082,9 +1077,12 @@ def stopwatch_and_wait_for_stop(relay, label_widget):
             safe_update_label(label_widget, "00:00:00")
             active_session_data[relay] = None 
             save_active_sessions()
-            if current_tv_frame: current_tv_frame.clear_session_color()
+
+            if current_tv_frame and root:
+                root.after(0, current_tv_frame.clear_session_color)
+
             if 0 <= relay < len(relay_vars) and root:
-                 root.after(0, lambda r=relay: relay_vars[r].set("Pilih Waktu"))
+                root.after(0, lambda r=relay: relay_vars[r].set("Pilih Waktu"))
 
     thread = threading.Thread(target=stopwatch, name=f"StopwatchThread-TV{relay+1}")
     thread.daemon = True
@@ -2193,35 +2191,33 @@ def start_app():
         side_nav_frame.grid_propagate(False) 
 
         def logout_app():
-            for i in range(NUM_TVS):
-                if timer_threads[i] and timer_threads[i].is_alive():
-                    stop_flags[i].set()
-            time.sleep(0.1) 
-            save_active_sessions() 
-            
-            if ser and ser.is_open: 
-                for i in range(NUM_TVS):
-                    try: ser.write(f"{i},0\n".encode()) ; time.sleep(0.02)
-                    except: pass
-                ser.close()
-            
-            if root: root.destroy()
-            sys.exit() 
+            global root
+            save_active_sessions()
+
+            if root:
+                root.destroy()
+
+            start_app() 
 
         button_size = (60,60) 
-        btn_setting = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/setting.png")), size=button_size), text="", width=70, height=70, command=open_settings)
+        btn_setting = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/setting.png")),
+                                                                       size=button_size), text="", width=60, height=60, command=open_settings)
         btn_setting.pack(pady=10, padx=10)
 
-        btn_laporan = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/laporan.png")), size=button_size), text="", width=70, height=70, command=lambda: LaporanWindow(root, current_user))
+        btn_laporan = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/laporan.png")),
+                                                                       size=button_size), text="", width=60, height=60, command=lambda: LaporanWindow(root, current_user))
         btn_laporan.pack(pady=10, padx=10)
 
-        btn_cafe = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/cafe_icon.png")), size=button_size), text="", width=70, height=70, command=lambda: CafeWindow(root))
+        btn_cafe = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/cafe_icon.png")),
+                                                                    size=button_size), text="", width=60, height=60, command=lambda: CafeWindow(root))
         btn_cafe.pack(pady=10, padx=10)
 
-        btn_user_mgmt = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/user_icon.png")), size=button_size), text="", width=70, height=70, command=lambda: UserManagementWindow(root))
+        btn_user_mgmt = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/user_icon.png")),
+                                                                         size=button_size), text="", width=60, height=60, command=lambda: UserManagementWindow(root))
         btn_user_mgmt.pack(pady=10, padx=10)
 
-        btn_logout_app = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/login.png")), size=button_size), text="", width=70, height=70, command=logout_app)
+        btn_logout_app = ctk.CTkButton(side_nav_frame, image=ctk.CTkImage(Image.open(resource_path("pics/login.png")),
+                                                                          size=button_size), text="", width=60, height=60, command=logout_app)
         btn_logout_app.pack(pady=10, padx=10)
         
         main_tv_display_frame = ctk.CTkFrame(inner_frame_content, fg_color="#6e7070") 
@@ -2254,7 +2250,7 @@ def start_app():
             col_idx = i % num_cols_tv
 
             relay_frame_instance = ctk.CTkFrame(main_tv_display_frame, width=tv_frame_width, height=tv_frame_height, border_color="#888888", border_width=2)
-            relay_frame_instance.grid(row=row_idx, column=col_idx, padx=6, pady=5)
+            relay_frame_instance.grid(row=row_idx, column=col_idx, padx=15, pady=5)
             relay_frame_instance.grid_propagate(False)
             all_relay_frames.append(relay_frame_instance)
 
@@ -2293,7 +2289,10 @@ def start_app():
             def create_session_color_clearer(frame_obj, logic_func):
                 def clearer():
                     setattr(frame_obj, 'current_session_type_color', None)
-                    logic_func(frame_obj)
+                    try:
+                        frame_obj.after(0, lambda: logic_func(frame_obj))
+                    except Exception as e:
+                        print(f"[ERROR] Gagal update GUI di clearer: {e}")
                 return clearer
 
             relay_frame_instance.update_cafe_label = create_cafe_label_updater(relay_frame_instance, _update_frame_color_logic_for_tv)
