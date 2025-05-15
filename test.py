@@ -1077,12 +1077,9 @@ def stopwatch_and_wait_for_stop(relay, label_widget):
             safe_update_label(label_widget, "00:00:00")
             active_session_data[relay] = None 
             save_active_sessions()
-
-            if current_tv_frame and root:
-                root.after(0, current_tv_frame.clear_session_color)
-
+            if current_tv_frame: current_tv_frame.clear_session_color()
             if 0 <= relay < len(relay_vars) and root:
-                root.after(0, lambda r=relay: relay_vars[r].set("Pilih Waktu"))
+                 root.after(0, lambda r=relay: relay_vars[r].set("Pilih Waktu"))
 
     thread = threading.Thread(target=stopwatch, name=f"StopwatchThread-TV{relay+1}")
     thread.daemon = True
